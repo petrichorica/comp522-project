@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <style>
+      th { text-align: left; }
+      td, th { padding: 8px; }
+      fieldset { margin: 10px 7px 0px 7px; }
+      input#done { margin-top: 10px; }
+      p#button { margin: 0px 7px 0px 0px; padding: 0; text-align: right; }
+    </style>
+  </head>
+  <body>
+    <form>
+      <fieldset>
+        <legend>Default OpenCL Platform</legend>
+
+        <table id="platforms">
+          <tr>
+            <th>&nbsp;</th>
+            <th>Name</th>
+            <th>Version</th>
+            <th>Vendor</th>
+          </tr>
+        </table>
+      </fieldset>
+
+      <fieldset>
+        <legend>Default OpenCL Device</legend>
+
+        <table id="devices">
+        </table>
+      </fieldset>
+
+      <p id="button"><input type="button" id="done" value="Save settings" /></p>
+    </form>
+  </body>
+</html>
