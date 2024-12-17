@@ -32,7 +32,7 @@ function sequentialMatrixMultiply(A, B) {
 
 "use strict";
 function render() {
-    var n = 500;
+    var n = 2000;
     var matrixA = new Array(n);
     for (var i = 0; i < n; i++) {
         matrixA[i] = new Array(n);
@@ -60,19 +60,23 @@ function render() {
     sequentialTimer.timeDiff = (sequentialTimer.endDate - sequentialTimer.startDate) / 1000;
 
     // Parallel matrix multiplication
+    var parallelTimer = {"startDate": null, "endDate": null, "timeDiff": null};
+    parallelTimer.startDate = performance.now();
     var parallelMatrixA = new ParallelArray(matrixA);
     var parallelMatrixB = new ParallelArray(matrixB);
-    var parallelTimer = {"startDate": null, "endDate": null, "timeDiff": null};
     // parallelTimer.startDate = new Date();
-    parallelTimer.startDate = performance.now();
     var parallelMatrixC = MatrixMultiply(parallelMatrixA, parallelMatrixB);
     // parallelTimer.endDate = new Date();
     // parallelTimer.timeDiff = (parallelTimer.endDate.getTime() - parallelTimer.startDate.getTime()) / 1000;
     parallelTimer.endDate = performance.now();
     parallelTimer.timeDiff = (parallelTimer.endDate - parallelTimer.startDate) / 1000;
 
+    const speedup = sequentialTimer.timeDiff / parallelTimer.timeDiff;
+
+    console.log("n:", n);
     console.log("sequential:", sequentialTimer.timeDiff);
     console.log("parallel:", parallelTimer.timeDiff);
+    console.log("speedup:", speedup);
 
     // console.log([].concat.apply([], matrixC));
     // console.log(parallelMatrixC.flatten().getArray());

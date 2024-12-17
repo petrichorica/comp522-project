@@ -3,11 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="worker.js"></script>
-    <script src="parallal.js"></script>
     <title>Web Worker Parallel Execution</title>
 </head>
 <body>
     <h1>Web Worker Parallel Execution</h1>
+    Matrix size:
+    <select id="size">
+        <option value="500" selected>500</option>
+        <option value="1000">1000</option>
+        <option value="1500">1500</option>
+        <option value="2000">2000</option>
+    </select>
+    <br>
+    Number of workers:
+    <select id="numWorkers">
+        <option value="2" selected>2</option>
+        <option value="4">4</option>
+        <option value="8">8</option>
+        <option value="16">16</option>
+    </select>
+    <br>
+    <button id="btnStart">Start</button>
+    <script src="worker.js"></script>
+    <script src="parallal.js"></script>
 </body>
 </html>

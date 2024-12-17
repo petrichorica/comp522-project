@@ -1,21 +1,28 @@
 // Listen for messages from the main thread
 self.onmessage = function (event) {
-  const { sabA, sabB, sabC, n, i } = event.data;
+  const { A, B, C, n, index, numWorkers } = event.data;
 
-  // Reconstruct typed arrays from SharedArrayBuffers
-  const A = new Int32Array(sabA);
-  const B = new Int32Array(sabB);
-  const C = new Int32Array(sabC);
+  let segmentSize = Math.floor(n / numWorkers);
+  if (segmentSize * numWorkers < n) {
+    segmentSize++;
+  }
+
+  // console.log("index: ", index);
+  // console.log("segmentSize: ", segmentSize);
+  // console.log("start: ", index * segmentSize);
+  // console.log("end: ", Math.min((index + 1) * segmentSize, n));
 
   // Calculate the entire row i of the result matrix
-  for (let j = 0; j < n; j++) {
-    let sum = 0;
-    for (let k = 0; k < n; k++) {
-      sum += A[i * n + k] * B[k * n + j];
+  for (let i = index * segmentSize; i < (index + 1) * segmentSize && i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      let sum = 0;
+      for (let k = 0; k < n; k++) {
+        sum += A[i * n + k] * B[k * n + j];
+      }
+      C[i * n + j] = sum;
     }
-    C[i * n + j] = sum;
   }
 
   // Notify the main thread that the computation of the row is done
-  self.postMessage({});
+  self.postMessage("done");
 };
