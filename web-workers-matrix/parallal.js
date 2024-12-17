@@ -1,54 +1,44 @@
 "use strict";
 
 // Size of the matrix
-const n = 4;
-const maxInt = 10; // Maximum integer value for random integers
+const n = 500;
+const maxInt = 10;
 
-// Initialize matrices A and B with random integer values
-const A = [];
-const B = [];
-for (let i = 0; i < n; i++) {
-  A[i] = [];
-  B[i] = [];
-  for (let j = 0; j < n; j++) {
-    if (i==j) {
-      A[i][j] = 1;
-    }else{
-      A[i][j] = 0;
-    }
-    B[i][j] = 2;
-    // TODO: change to this
-    // A[i][j] = Math.floor(Math.random() * maxInt);
-    // B[i][j] = Math.floor(Math.random() * maxInt);
-  }
+// Create SharedArrayBuffers for matrices A and B
+const size = n * n;
+const sabA = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * size);
+const sabB = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * size);
+
+// Create typed arrays over the SharedArrayBuffers
+const A = new Float32Array(sabA);
+const B = new Float32Array(sabB);
+
+// Initialize A and B with random integer values
+for (let i = 0; i < size; i++) {
+  A[i] = Math.floor(Math.random() * maxInt);
+  B[i] = Math.floor(Math.random() * maxInt);
 }
 
 // Sequential matrix multiplication function
-function sequentialMatrixMultiply(A, B) {
-  const n = A.length;
-  const C = [];
+function sequentialMatrixMultiply(A, B, n) {
+  const C = new Float32Array(n * n);
   for (let i = 0; i < n; i++) {
-    C[i] = [];
     for (let j = 0; j < n; j++) {
       let sum = 0;
       for (let k = 0; k < n; k++) {
-        sum += A[i][k] * B[k][j];
+        sum += A[i * n + k] * B[k * n + j];
       }
-      C[i][j] = sum;
+      C[i * n + j] = sum;
     }
   }
   return C;
 }
 
 // Parallel matrix multiplication function
-function parallelMatrixMultiply(A, B, numWorkers, callback) {
-  const n = A.length;
-
-  // Result matrix C
-  const C = [];
-  for (let i = 0; i < n; i++) {
-    C[i] = new Array(n).fill(0);
-  }
+function parallelMatrixMultiply(A, B, n, numWorkers, callback) {
+  // Create SharedArrayBuffer for the result matrix C
+  const sabC = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * n * n);
+  const sharedC = new Float32Array(sabC);
 
   let completedTasks = 0;
   const totalTasks = n * n;
@@ -61,20 +51,21 @@ function parallelMatrixMultiply(A, B, numWorkers, callback) {
     }
   }
 
-  // Create a pool of workers
-  const workers = [];
-
   // Function to assign a task to a worker
   function assignTask(worker) {
     if (taskQueue.length > 0) {
       const { i, j } = taskQueue.shift();
       // Send data to the worker
-      worker.postMessage({
-        A: A,
-        B: B,
-        i: i,
-        j: j,
-      });
+      worker.postMessage(
+        {
+          A: A,
+          B: B,
+          C: sharedC,
+          n: n,
+          i: i,
+          j: j,
+        }
+      );
     } else {
       // No more tasks, terminate the worker
       worker.terminate();
@@ -83,16 +74,10 @@ function parallelMatrixMultiply(A, B, numWorkers, callback) {
 
   // Function to handle messages from workers
   function handleWorkerMessage(event) {
-    const { i, j, value } = event.data;
-    console.log(`Worker completed task (${i}, ${j})`);
-
-    // Store the computed value in the result matrix C
-    C[i][j] = value;
-
     completedTasks++;
     if (completedTasks === totalTasks) {
       // All tasks are completed
-      callback(C);
+      callback(sharedC);
     } else {
       // Assign a new task to the worker
       assignTask(event.target);
@@ -100,9 +85,8 @@ function parallelMatrixMultiply(A, B, numWorkers, callback) {
   }
 
   // Create workers and start assigning tasks
-  for (let i = 0; i < numWorkers; i++) {
-    const worker = new Worker('worker.js');
-    workers.push(worker);
+  for (let w = 0; w < numWorkers; w++) {
+    const worker = new Worker("worker.js");
 
     // Listen for messages from the worker
     worker.onmessage = handleWorkerMessage;
@@ -114,19 +98,25 @@ function parallelMatrixMultiply(A, B, numWorkers, callback) {
 
 // Measure execution time for sequential multiplication
 const sequentialStartTime = performance.now();
-const sequentialResult = sequentialMatrixMultiply(A, B);
+const sequentialResult = sequentialMatrixMultiply(A, B, n);
 const sequentialEndTime = performance.now();
-const sequentialTime = (sequentialEndTime - sequentialStartTime) / 1000;
-console.log(`Sequential execution time: ${sequentialTime} seconds`);
+const sequentialTime = sequentialEndTime - sequentialStartTime;
+console.log(
+  `Sequential execution time: ${sequentialTime.toFixed(3)} milliseconds`
+);
 
 // Measure execution time for parallel multiplication
 const numWorkers = 4; // Customize the number of workers
 const parallelStartTime = performance.now();
 
-parallelMatrixMultiply(A, B, numWorkers, function (parallelResult) {
+parallelMatrixMultiply(A, B, n, numWorkers, function (parallelResult) {
   const parallelEndTime = performance.now();
-  const parallelTime = (parallelEndTime - parallelStartTime) / 1000;
-  console.log(`Parallel execution time with ${numWorkers} workers: ${parallelTime} seconds`);
+  const parallelTime = parallelEndTime - parallelStartTime;
+  console.log(
+    `Parallel execution time with ${numWorkers} workers: ${parallelTime.toFixed(
+      3
+    )} milliseconds`
+  );
 
   // Optional: Compare results
   // console.log('Sequential Result:', sequentialResult);

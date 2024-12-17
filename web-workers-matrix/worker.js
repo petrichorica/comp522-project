@@ -1,20 +1,22 @@
 // Function to calculate a single element of the result matrix
-function calculateElement(A, B, i, j) {
-  const n = A.length;
+function calculateElement(sharedA, sharedB, n, i, j) {
   let sum = 0;
   for (let k = 0; k < n; k++) {
-    sum += A[i][k] * B[k][j];
+    sum += sharedA[i * n + k] * sharedB[k * n + j];
   }
   return sum;
 }
 
 // Listen for messages from the main thread
-self.onmessage = function(event) {
-  const { A, B, i, j } = event.data;
+self.onmessage = function (event) {
+  const { A, B, C, n, i, j } = event.data;
 
   // Calculate the element at position (i, j)
-  const result = calculateElement(A, B, i, j);
+  const value = calculateElement(A, B, n, i, j);
 
-  // Send the result back to the main thread
-  self.postMessage({ i, j, value: result });
+  // Store the result in the shared result array
+  C[i * n + j] = value;
+
+  // Notify the main thread that the computation is done
+  self.postMessage({});
 };
