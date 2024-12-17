@@ -261,11 +261,9 @@ NBody.display = {
             }
         }
         if (NBody.display.implementation === "sequential") {
-            NBody.display.relativePositionFloat32 = NBody.private.posTA;
+            NBody.display.relativePositionFloat32 = NBody.private.pos;
         } else {
-            // I think we have to touch the data to avoid webGL errors.
-            NBody.private.pos.materialize();
-            NBody.display.relativePositionFloat32 = NBody.private.pos.data;
+            NBody.display.relativePositionFloat32 = NBody.private.pos;
         }
 
 
@@ -344,22 +342,22 @@ NBody.display = {
     },
     "clockHandChars": ["/ ", "\\ "],
     "clockHandIndex": 0,
-    "animate": function animate() {
+    "animate": async function animate() {
 
         if (false) { // Set to true to avoid debug/timing output
-            NBody.animateTick(NBody.display.implementation);
+            await NBody.animateTick(NBody.display.implementation);
             return;
         }
 
         if (NBody.display.animateTimer.startDate === 0) {
-            NBody.display.animateTimer.startDate = new Date();
+            NBody.display.animateTimer.startDate = performance.now();
             NBody.display.animateTimer.firstDate = NBody.display.animateTimer.startDate;
         }
 
         NBody.display.animateTimer.totalTicks++;
         if (NBody.display.animateTimer.ticks++ > NBody.display.animateTimer.tickCheck) {
             var fps, aveFps;
-            NBody.display.animateTimer.endDate = new Date();
+            NBody.display.animateTimer.endDate = performance.now();
             NBody.display.animateTimer.elapsedTime = NBody.display.animateTimer.endDate - NBody.display.animateTimer.startDate;
             NBody.display.animateTimer.totalElapsedTime = NBody.display.animateTimer.endDate - NBody.display.animateTimer.firstDate;
             fps = Math.floor((NBody.display.animateTimer.ticks / (NBody.display.animateTimer.elapsedTime / 1000)) + .5);
@@ -377,19 +375,27 @@ NBody.display = {
             NBody.display.animateTimer.ticks = 0;
         }
 
-        NBody.animateTick(NBody.display.implementation);
+        await NBody.animateTick(NBody.display.implementation);
+
+        // debug
+        // console.log("pos", NBody.private.pos);
     },
 
-    "tick": function tick() {
+    "tick": async function tick() {
         if (NBody.private.stop) {
             // This will eat any remaining events
+            if (NBody.display.implementation === "parallel") {
+                for (let i = 0; i < NBody.private.numWorkers; i++) {
+                    NBody.private.workers[i].terminate();
+                }
+            }
             return;
         }
         NBody.display.handleKeys();
         NBody.display.drawScene();
         NBody.display.animateViewPoint();
-        NBody.display.animate();
-        window.mozRequestAnimationFrame(NBody.display.tick); // window.setTimeout(tick, 1000/60);
+        await NBody.display.animate();
+        window.requestAnimationFrame(NBody.display.tick); // window.setTimeout(tick, 1000/60);
     },
 
     "currentlyPressedKeys": {},
@@ -490,10 +496,9 @@ NBody.display = {
         NBody.display.triangleVertexPositionBufferCount = NBody.private.numBodies;
         NBody.display.triangleVertexPositionBuffer = new Array(NBody.display.triangleVertexPositionBufferCount);
         if (implementation === "sequential") {
-            NBody.display.relativePositionFloat32 = NBody.private.posTA;
+            NBody.display.relativePositionFloat32 = NBody.private.pos;
         } else {
-            // Do not need to materialize during initialization.
-            NBody.display.relativePositionFloat32 = NBody.private.pos.data;
+            NBody.display.relativePositionFloat32 = NBody.private.pos;
         }
         NBody.display.initGL(canvas);
         NBody.display.initShaders();
