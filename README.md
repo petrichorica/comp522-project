@@ -1,3 +1,12 @@
+## What we did in this project
+"RiverTrail" directory contains the original implementation of River Trail library. The code is fetched from https://github.com/IntelLabs/RiverTrail. We did minor changes to the code:
+- Added `console.log` to the code to print the compiled OpenCL code.
+- Fix the incorrect formula in the `nbody-webgl` example.
+
+"web-workers" directory contains the implementation of experiments using web workers.
+
+"sharedBuffer" directory contains an example of using SharedArrayBuffer to implement `map` function.
+
 ## Launch an HTTP server to run the project
 `python3 -m http.server -b 127.0.0.1 8080`
 
