@@ -1,22 +1,21 @@
-// Function to calculate a single element of the result matrix
-function calculateElement(sharedA, sharedB, n, i, j) {
-  let sum = 0;
-  for (let k = 0; k < n; k++) {
-    sum += sharedA[i * n + k] * sharedB[k * n + j];
-  }
-  return sum;
-}
-
 // Listen for messages from the main thread
 self.onmessage = function (event) {
-  const { A, B, C, n, i, j } = event.data;
+  const { sabA, sabB, sabC, n, i } = event.data;
 
-  // Calculate the element at position (i, j)
-  const value = calculateElement(A, B, n, i, j);
+  // Reconstruct typed arrays from SharedArrayBuffers
+  const A = new Int32Array(sabA);
+  const B = new Int32Array(sabB);
+  const C = new Int32Array(sabC);
 
-  // Store the result in the shared result array
-  C[i * n + j] = value;
+  // Calculate the entire row i of the result matrix
+  for (let j = 0; j < n; j++) {
+    let sum = 0;
+    for (let k = 0; k < n; k++) {
+      sum += A[i * n + k] * B[k * n + j];
+    }
+    C[i * n + j] = sum;
+  }
 
-  // Notify the main thread that the computation is done
+  // Notify the main thread that the computation of the row is done
   self.postMessage({});
 };

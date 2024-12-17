@@ -1,17 +1,19 @@
 "use strict";
 
 // Size of the matrix
-const n = 500;
+const n = 4;
 const maxInt = 10;
 
 // Create SharedArrayBuffers for matrices A and B
 const size = n * n;
-const sabA = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * size);
-const sabB = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * size);
+const sabA = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * size);
+const sabB = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * size);
+const sabC = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * size);
 
 // Create typed arrays over the SharedArrayBuffers
-const A = new Float32Array(sabA);
-const B = new Float32Array(sabB);
+const A = new Int32Array(sabA);
+const B = new Int32Array(sabB);
+const C = new Int32Array(sabC);
 
 // Initialize A and B with random integer values
 for (let i = 0; i < size; i++) {
@@ -21,7 +23,7 @@ for (let i = 0; i < size; i++) {
 
 // Sequential matrix multiplication function
 function sequentialMatrixMultiply(A, B, n) {
-  const C = new Float32Array(n * n);
+  const C = new Int32Array(n * n);
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
       let sum = 0;
@@ -35,64 +37,54 @@ function sequentialMatrixMultiply(A, B, n) {
 }
 
 // Parallel matrix multiplication function
-function parallelMatrixMultiply(A, B, n, numWorkers, callback) {
-  // Create SharedArrayBuffer for the result matrix C
-  const sabC = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * n * n);
-  const sharedC = new Float32Array(sabC);
+function parallelMatrixMultiply(A, B, C, n, numWorkers, callback) {
+  let completedRows = 0;
 
-  let completedTasks = 0;
-  const totalTasks = n * n;
-
-  // Create a queue of tasks (i, j pairs)
-  const taskQueue = [];
+  // Create a queue of row indices
+  const rowQueue = [];
   for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      taskQueue.push({ i, j });
-    }
+    rowQueue.push(i);
   }
 
-  // Function to assign a task to a worker
-  function assignTask(worker) {
-    if (taskQueue.length > 0) {
-      const { i, j } = taskQueue.shift();
+  // Function to assign a row to a worker
+  function assignRow(worker) {
+    if (rowQueue.length > 0) {
+      const i = rowQueue.shift();
       // Send data to the worker
-      worker.postMessage(
-        {
-          A: A,
-          B: B,
-          C: sharedC,
-          n: n,
-          i: i,
-          j: j,
-        }
-      );
+      worker.postMessage({
+        sabA: A.buffer,
+        sabB: B.buffer,
+        sabC: C.buffer,
+        n: n,
+        i: i,
+      });
     } else {
-      // No more tasks, terminate the worker
+      // No more rows, terminate the worker
       worker.terminate();
     }
   }
 
   // Function to handle messages from workers
   function handleWorkerMessage(event) {
-    completedTasks++;
-    if (completedTasks === totalTasks) {
-      // All tasks are completed
-      callback(sharedC);
+    completedRows++;
+    if (completedRows === n) {
+      // All rows are completed
+      callback(C);
     } else {
-      // Assign a new task to the worker
-      assignTask(event.target);
+      // Assign a new row to the worker
+      assignRow(event.target);
     }
   }
 
-  // Create workers and start assigning tasks
+  // Create workers and start assigning rows
   for (let w = 0; w < numWorkers; w++) {
     const worker = new Worker("worker.js");
 
     // Listen for messages from the worker
     worker.onmessage = handleWorkerMessage;
 
-    // Assign initial task to the worker
-    assignTask(worker);
+    // Assign initial row to the worker
+    assignRow(worker);
   }
 }
 
@@ -109,7 +101,22 @@ console.log(
 const numWorkers = 4; // Customize the number of workers
 const parallelStartTime = performance.now();
 
-parallelMatrixMultiply(A, B, n, numWorkers, function (parallelResult) {
+
+// Function to compare two matrices
+function compareResults(seqResult, parResult, n) {
+  const epsilon = 1e-6; // Tolerance for floating-point comparison
+  for (let i = 0; i < n * n; i++) {
+    if (Math.abs(seqResult[i] - parResult[i]) > epsilon) {
+      console.error(
+        `Difference at index ${i}: sequentialResult[${i}] = ${seqResult[i]}, parallelResult[${i}] = ${parResult[i]}`
+      );
+      return false;
+    }
+  }
+  return true;
+}
+
+parallelMatrixMultiply(A, B, C, n, numWorkers, function (parallelResult) {
   const parallelEndTime = performance.now();
   const parallelTime = parallelEndTime - parallelStartTime;
   console.log(
@@ -118,7 +125,11 @@ parallelMatrixMultiply(A, B, n, numWorkers, function (parallelResult) {
     )} milliseconds`
   );
 
-  // Optional: Compare results
-  // console.log('Sequential Result:', sequentialResult);
-  // console.log('Parallel Result:', parallelResult);
+  // Compare the results
+  const resultsAreEqual = compareResults(sequentialResult, parallelResult, n);
+  if (resultsAreEqual) {
+    console.log("Sequential and parallel results are equal.");
+  } else {
+    console.log("Sequential and parallel results are NOT equal.");
+  }
 });
