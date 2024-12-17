@@ -86,7 +86,7 @@ var NBody = {
     },
 
     "animateTickParallel": async function animateTickParallel() {
-        const segmentSize = NBody.private.numBodies / NBody.private.numWorkers;
+        const segmentSize = parseInt(NBody.private.numBodies / NBody.private.numWorkers);
 
         const workerPromises = (worker, i) => new Promise((resolve, reject) => {
             const handleUpdate = (event) => {
