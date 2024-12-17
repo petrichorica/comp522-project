@@ -1,7 +1,7 @@
 ## What we did in this project
 "RiverTrail" directory contains the original implementation of River Trail library. The code is fetched from https://github.com/IntelLabs/RiverTrail. We did minor changes to the code:
 - Added `console.log` to the code to print the compiled OpenCL code.
-- Fix the incorrect formula in the `nbody-webgl` example.
+- Fixed the incorrect formula in the `nbody-webgl` example.
 
 "web-workers" directory contains the implementation of experiments using web workers.
 
