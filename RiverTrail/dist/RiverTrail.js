@@ -12426,6 +12426,8 @@ RiverTrail.compiler.codeGen = (function() {
                 console.log(e.toString());
                 throw e;
             }
+            // See the generated OpenCL code. Comment out when not needed.
+            // console.log("kernelCode", kernelCode);
             return kernelCode;
         }
 
